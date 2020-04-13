@@ -38,9 +38,9 @@ The pretrained patch alignment and patch matching models can be downloaded Baidu
 
 References
 -----
-Arcface:  https://github.com/ronghuaiyang/arcface-pytorch
-Siamese-triplet: https://github.com/adambielski/siamese-triplet
-Geometric Matching: https://github.com/hjweide/convnet-for-geometric-matching
+* Arcface:  https://github.com/ronghuaiyang/arcface-pytorch
+* Siamese-triplet: https://github.com/adambielski/siamese-triplet
+* Geometric Matching: https://github.com/hjweide/convnet-for-geometric-matching
 
 
 Contact
