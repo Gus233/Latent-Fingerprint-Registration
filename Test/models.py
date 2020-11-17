@@ -62,13 +62,13 @@ class Register_Unet_down(nn.Module):
 class Register_Unet_up(nn.Module):
     def __init__(self):
         super(Register_Unet_up, self).__init__()
-        self.conv1 = DoubleConv(400, 256)
+        self.conv1 = DoubleConv(625, 256)
         self.pool1 = nn.MaxPool2d(2)
 
         self.conv2 = DoubleConv(256, 128)
         self.pool2 = nn.MaxPool2d(2)
         self.dropout = nn.Dropout()
-        self.fc = nn.Linear(128*5*5, 3)
+        self.fc = nn.Linear(128*6*6, 3)
 
 
     def forward(self, x):
@@ -136,11 +136,11 @@ class Register_SiameseNet(nn.Module):
 
 
     def get_trans(self, x1, x2):
-        pd1, feature1 = self.embedding_net(x1)
-        pd2, feature2 = self.embedding_net(x2)
+       # pd1, feature1 = self.embedding_net(x1)
+       # pd2, feature2 = self.embedding_net(x2)
 
-        feature1 = self.FeatureL2Norm(feature1)
-        feature2 = self.FeatureL2Norm(feature2)
+        feature1 = self.FeatureL2Norm(x1)
+        feature2 = self.FeatureL2Norm(x2)
         correlation = self.FeatureCorrelation(feature1, feature2)
         correlation = self.FeatureL2Norm(self.ReLU(correlation))
         trans = self.regreesion_net(correlation)
@@ -164,7 +164,7 @@ class Similarity_Unet_down(nn.Module):
         self.pool4 = nn.MaxPool2d(2)
         self.conv5 = DoubleConv(512, 512)
 
-        self.fc = nn.Linear(512*10*10, 512)
+        self.fc = nn.Linear(512*12*12, 512)
         self.bn = nn.BatchNorm1d(512)
 
         self.dropout = nn.Dropout()

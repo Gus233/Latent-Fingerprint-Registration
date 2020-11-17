@@ -63,13 +63,14 @@ class Unet_down(nn.Module):
 class Unet_up(nn.Module):
     def __init__(self):
         super(Unet_up, self).__init__()
-        self.conv1 = DoubleConv(400, 256)
+        self.conv1 = DoubleConv(625, 256)
         self.pool1 = nn.MaxPool2d(2)
 
         self.conv2 = DoubleConv(256, 128)
         self.pool2 = nn.MaxPool2d(2)
         self.dropout = nn.Dropout()
-        self.fc = nn.Linear(128*5*5, 3)
+        self.fc = nn.Linear(128*6*6, 3)
+
 
 
     def forward(self, x):
@@ -125,6 +126,7 @@ class AlignmentNet(nn.Module):
         feature1 = self.FeatureL2Norm(feature1)
         feature2 = self.FeatureL2Norm(feature2)
         correlation = self.FeatureCorrelation(feature1, feature2)
+
         correlation = self.FeatureL2Norm(self.ReLU(correlation))
         trans = self.regreesion_net(correlation)
 

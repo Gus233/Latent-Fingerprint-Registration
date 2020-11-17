@@ -37,9 +37,11 @@ class Unet_down(nn.Module):
         self.conv4 = DoubleConv(256, 512)
         self.pool4 = nn.MaxPool2d(2)
         self.conv5 = DoubleConv(512, 512)
-        self.fc = nn.Linear(512*10*10, 512)
+        self.fc = nn.Linear(512*12*12, 512)
         self.bn = nn.BatchNorm1d(512)
-
+        # self.fc2 = nn.Linear(512,96)
+        #
+        # self.relu = nn.ReLU(inplace = True)
         self.dropout = nn.Dropout()
     def forward(self, x):
         x = self.conv1(x)
@@ -49,16 +51,20 @@ class Unet_down(nn.Module):
         x = self.conv3(x)
         x = self.pool3(x)
 
-        z = x
+        z = x  # for estimate pd
         x = self.conv4(x)
         x = self.pool4(x)
         x = self.conv5(x)
 
-        y = x
+        y = x  # feature
         y = self.dropout(y)
         y = y.view(y.size(0), -1)
         y = self.fc(y)
         y = self.bn(y)
+
+   
+        y = F.normalize(y, p=2, dim=1)
+
         return z,y
 
 
@@ -83,11 +89,16 @@ class SiameseNet(nn.Module):
         self.embedding_net = Unet_down()
         self.regreesion_net = Unet_up()
 
+
+
     def forward(self, x1, x2):
         c1,feature1 = self.embedding_net(x1)
         c2,feature2 = self.embedding_net(x2)
         output1 = self.regreesion_net(c1)
         output2 = self.regreesion_net(c2)
+
+
+
         return feature1, feature2, output1, output2
 
     def get_embedding(self, x):

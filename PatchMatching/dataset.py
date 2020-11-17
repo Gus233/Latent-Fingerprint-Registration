@@ -18,7 +18,7 @@ from collections import defaultdict
 
 class Dataset(data.Dataset):
 
-    def __init__(self, root, pd_root, data_list_file, phase='train', input_shape=(1, 128, 128)):
+    def __init__(self, root, pd_root, data_list_file, phase='train', input_shape=(1, 200, 200)):
         self.phase = phase
         self.input_shape = input_shape
 
@@ -38,24 +38,24 @@ class Dataset(data.Dataset):
 
         if self.phase == 'train':
             self.transforms = T.Compose([
-                T.CenterCrop([160, 160]),
+        #        T.CenterCrop(input_shape),
                 T.ToTensor(),
                 normalize
             ])
             self.pd_transforms = T.Compose([
-                T.CenterCrop([160, 160]),
+         #       T.CenterCrop(input_shape),
                 T.ToTensor()
             ])
 
         else:
             self.transforms = T.Compose([
-                T.CenterCrop([160, 160]),
+                T.CenterCrop(input_shape),
                 T.ToTensor(),
                 normalize
             ])
 
             self.pd_transforms = T.Compose([
-                T.CenterCrop([160, 160]),
+                T.CenterCrop(input_shape),
                 T.ToTensor()
             ])
 
@@ -132,8 +132,8 @@ class SiameseData(Dataset):
 
     def __getitem__(self, index):
         if self.train:
-            target = np.random.randint(0, 2)
-            # target = 1  ################
+            # target = np.random.randint(0, 2)  # revise 0429
+            target = 1  #######
             img1, pdimg1,  label1 = self.train_data[index], self.train_pddata[index], self.train_labels[index].item()
             if target == 1:
                 siamese_index = index
@@ -154,7 +154,6 @@ class SiameseData(Dataset):
         img2 = img2.convert('L')
         pdimg1 = Image.open(pdimg1)
         pdimg1 = pdimg1.convert('L')
-
         pdimg2 = Image.open(pdimg2)
         pdimg2 = pdimg2.convert('L')
 
@@ -164,22 +163,73 @@ class SiameseData(Dataset):
 
             pdimg1 = self.pd_transforms(pdimg1)
             pdimg2 = self.pd_transforms(pdimg2)
-            pdimg1 = pdimg1[:,1::4,1::4]
-            pdimg2 = pdimg2[:, 1::4, 1::4]
-            pdimg1[pdimg1 > 165 / 256] = pdimg1[pdimg1 > 165 / 256] - 1
-            pdimg1[pdimg1 > 90 / 256] = 180/256
-            pdimg1 = torch.cat((torch.cos(pdimg1*256/180*math.pi),  torch.sin(pdimg1*256/180*math.pi)), 0)
-            pdimg2[pdimg2 > 165 / 256] = pdimg2[pdimg2 > 165 / 256] - 1
-            pdimg2[pdimg2 > 90 / 256] = 180 / 256
-            pdimg2 = torch.cat((torch.cos(pdimg2*256/180*math.pi), torch.sin(pdimg2*256/ 180 * math.pi)),0)
+            # pdimg1 = pdimg1[:,1::4,1::4]
+            # pdimg2 = pdimg2[:, 1::4, 1::4]
+            # pdimg1[pdimg1 > 165 / 256] = pdimg1[pdimg1 > 165 / 256] - 1
+            # pdimg1[pdimg1 > 90 / 256] = 180/256
+            # pdimg1 = torch.cat((torch.cos(pdimg1*256/180*math.pi),  torch.sin(pdimg1*256/180*math.pi)), 0)
+            # pdimg2[pdimg2 > 165 / 256] = pdimg2[pdimg2 > 165 / 256] - 1
+            # pdimg2[pdimg2 > 90 / 256] = 180 / 256
+            # pdimg2 = torch.cat((torch.cos(pdimg2*256/180*math.pi), torch.sin(pdimg2*256/ 180 * math.pi)),0)
 
-        return img1, img2, (pdimg1, pdimg2), (label1, label2)
+
+            pdimg1[pdimg1 > 165 / 255] = pdimg1[pdimg1 > 165 / 255] - 1
+            pdimg1[pdimg1 > 90 / 255] = 180 / 255
+            pdimg2[pdimg2 > 165 / 255] = pdimg2[pdimg2 > 165 / 255] - 1
+            pdimg2[pdimg2 > 90 / 255] = 91 / 255
+
+            MASK = pdimg2.numpy().copy()
+            MASK[MASK >= 91.0 / 255.0] = 1.0
+            MASK[MASK < 91.0 / 255.0] = 0.0
+            MASK = 1 - MASK
+
+            dx = np.random.randint(20) - 10  # + left
+            dy = np.random.randint(20) - 10  # + up
+            da = np.random.randint(10) - 5
+
+            M = cv2.getRotationMatrix2D((120, 120), da, 1)
+            warped_img2 = cv2.warpAffine(img2.numpy().squeeze(), M, dsize=(240, 240), borderValue=1.0)
+            warped_pdimg2 = cv2.warpAffine(pdimg2.numpy().squeeze(), M, dsize=(240, 240), borderValue=91.0 / 255.0,
+                                           flags=cv2.INTER_NEAREST)
+            warped_roi = cv2.warpAffine(MASK.squeeze(), M, dsize=(240, 240), borderValue=0.0,
+                                        flags=cv2.INTER_NEAREST)
+
+            M = np.float32([[1, 0, dx], [0, 1, dy]])
+            warped_img2 = cv2.warpAffine(warped_img2.squeeze(), M, dsize=(240, 240), borderValue=1.0)
+            warped_roi = cv2.warpAffine(warped_roi, M, dsize=(240, 240), borderValue=0.0,
+                                        flags=cv2.INTER_NEAREST)
+            warped_pdimg2 = cv2.warpAffine(warped_pdimg2.squeeze(), M, dsize=(240, 240), borderValue=91.0 / 255.0,
+                                           flags=cv2.INTER_NEAREST)
+
+            warped_pdimg2[warped_roi == 1] = np.remainder(warped_pdimg2[warped_roi == 1] + da / 255.0, 180.0 / 255.0)
+            ind = np.where((warped_roi == 1) & (warped_pdimg2 > 90 / 255.0))
+            warped_pdimg2[ind] = warped_pdimg2[ind] - 180.0 / 255.0
+            warped_pdimg2[warped_roi == 0] = 180.0 / 255.0
+
+            warped_img2 = torch.from_numpy(warped_img2)
+            warped_img2 = warped_img2.unsqueeze(0)
+
+            warped_img2 = warped_img2[:, 20:220, 20:220]
+            img1 = img1[:, 20:220, 20:220]
+
+            pdimg1 = pdimg1[:, 20:220, 20:220]
+            warped_pdimg2 = torch.from_numpy(warped_pdimg2)
+            warped_pdimg2 = warped_pdimg2.unsqueeze(0)
+            warped_pdimg2 = warped_pdimg2[:, 20:220, 20:220]
+
+            pdimg1 = pdimg1[:, 1::4, 1::4]
+            warped_pdimg2 = warped_pdimg2[:, 1::4, 1::4]
+            pdimg1 = torch.cat((torch.cos(pdimg1 * 255 / 180 * math.pi), torch.sin(pdimg1 * 255 / 180 * math.pi)), 0)
+            warped_pdimg2 = torch.cat((torch.cos(warped_pdimg2 * 255 / 180 * math.pi), torch.sin(warped_pdimg2 * 255 / 180 * math.pi)), 0)
+
+       # return img1, img2, (pdimg1, pdimg2), (label1, label2)
+        return img1, warped_img2, (pdimg1, warped_pdimg2), (label1, label2)
 
     def __len__(self):
-        return len(self.mnist_dataset)
+        return len(self.dataset)
 
 
-class BatchGenerator(pdimg):
+class BatchGenerator(object):
     def __init__(self, labels, num_instances, batch_size):
         self.labels = labels
         self.num_instances = num_instances

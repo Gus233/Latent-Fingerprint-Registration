@@ -7,10 +7,10 @@ import torchvision
 
 
  
-from metrics import *
+
 from lossfunction import *
 from dataset import Dataset
-from view_model import view_model
+
 
 import torch
 import random
@@ -23,7 +23,7 @@ from torch.optim.lr_scheduler import StepLR, ExponentialLR
 from test import *
 
 from dataset import SiameseData
-from moels import  SiameseNet 
+from models import  SiameseNet
 from lossfunction import OnlineContrastiveLoss
 
 from dataset import BalancedBatchSampler
@@ -48,17 +48,15 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_id
 
-
-
     train_dataset = Dataset(opt.train_root, opt.pd_root,  opt.train_list, phase='train', input_shape=opt.input_shape)
 
     kwargs = {'num_workers': 4, 'pin_memory': False}
 
     margin = 1
-    valid_criterion = ContrastiveLoss_new(margin)
+    valid_criterion = ContrastiveLoss(margin)
 
     if opt.contrastive:
-        siamese_train_dataset = SiameseMNIST(train_dataset)  # Returns pairs of images and target same/different
+        siamese_train_dataset = SiameseData(train_dataset)  # Returns pairs of images and target same/different
 
     trainloader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=opt.train_batch_size, shuffle=True,
                                                         **kwargs)
@@ -66,12 +64,12 @@ if __name__ == '__main__':
     print('{} train iters per epoch:'.format(len(trainloader)))
 
     if opt.contrastive:
-        margin = 1
+        margin = np.sqrt(2.0)
         criterion = OnlineContrastiveLoss(margin, HardNegativePairSelector())
 
 
-    embedding_net=Unet_down()
-    regression_net=Unet_up()
+    embedding_net = Unet_down()
+    regression_net = Unet_up()
     if opt.contrastive:
         model = SiameseNet(embedding_net, regression_net)
 
@@ -144,7 +142,6 @@ if __name__ == '__main__':
                         ii * len(data1), len(trainloader.dataset),
                         100. * ii / len(trainloader), np.mean(losses),
                         np.mean(losses1),np.mean(losses2), np.mean(losses3))
-
 
                     print(message)
                     losses = []

@@ -73,12 +73,35 @@ class HardNegativePairSelector(PairSelector):
         positive_pairs = all_pairs[(labels[all_pairs[:, 0]] == labels[all_pairs[:, 1]]).nonzero()]
         negative_pairs = all_pairs[(labels[all_pairs[:, 0]] != labels[all_pairs[:, 1]]).nonzero()]
 
+
         negative_distances = distance_matrix[negative_pairs[:, 0], negative_pairs[:, 1]]
         negative_distances = negative_distances.cpu().data.numpy()
         top_negatives = np.argpartition(negative_distances, len(positive_pairs))[:len(positive_pairs)]
         top_negative_pairs = negative_pairs[torch.LongTensor(top_negatives)]
 
-        return positive_pairs, top_negative_pairs
+
+
+
+        # positive_distances = distance_matrix[positive_pairs[:, 0], positive_pairs[:, 1]]
+        # positive_distances = positive_distances.cpu().data.numpy()
+        #
+        # distances = np.concatenate((positive_distances, negative_distances))
+        # label = np.zeros(distances.shape)
+        # label[:positive_distances.shape[0]] = 1
+        #
+        #
+        # y_true = np.asarray(label)
+        # best_acc = 0
+        # best_th = 0
+        # for i in range(len(distances)):
+        #     th = distances[i]
+        #     y_test = (distances >= th)
+        #     acc = np.mean((y_test == y_true).astype(int))
+        #     if acc > best_acc:
+        #         best_acc = acc
+        #         best_th = th
+
+        return positive_pairs, top_negative_pairs#, best_th
 
 
 class TripletSelector:

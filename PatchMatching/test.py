@@ -9,7 +9,6 @@ from scipy import io
 from torch.nn import DataParallel
 
 from models import *
-from metrics import *
 from lossfunction import *
 from config import Config
 
@@ -33,6 +32,7 @@ def load_image(img_path):
     image = cv2.imread(img_path, 0)
     if image is None:
         return None
+    image = image[20:220, 20:220]
     image = image[np.newaxis, np.newaxis, :, :]
     image = image.astype(np.float32, copy=False)
     image -= 127.5
@@ -60,7 +60,7 @@ def get_featurs(model, test_list, batch_size=10):
             data = torch.from_numpy(images)
             data = data.to(torch.device("cuda"))
             feature = model.module.get_embedding(data)
-            feature = feature.cpu().numpy()
+            feature = feature.data.cpu().numpy()
 
             if features is None:
                 features = feature
@@ -69,7 +69,7 @@ def get_featurs(model, test_list, batch_size=10):
 
             if cnt % 50 == 0:
                 message = '[{}/{} ({:.0f}%)]'.format(
-                    cnt, len(test_list), 100. * cnt / len(test_list))
+                    cnt*batch_size, len(test_list), 100. * cnt*batch_size / len(test_list))
                 print(message)
 
             images = None
@@ -119,6 +119,7 @@ def test_performance(fe_dict, pair_list):
 
     sims = []
     labels = []
+    cnt = 0
     for pair in pairs:
         splits = pair.split()
         fe_1 = fe_dict[splits[0]]
@@ -128,9 +129,15 @@ def test_performance(fe_dict, pair_list):
 
         sims.append(sim)
         labels.append(label)
-
-  #  io.savemat(opt.save_path, {'sims': sims, 'labels': labels})
+        cnt +=1
+        if cnt % 1000 == 0:
+            message = '[{}/{} ({:.0f}%)]'.format(
+                cnt, len(pairs), 100. * cnt / len(pairs))
+            print(message)
+    io.savemat(opt.save_path, {'sims': sims, 'labels': labels})
     acc, th = cal_accuracy(sims, labels)
+   # acc = 0
+   # th = 0
     return acc, th
 
 
@@ -161,8 +168,8 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(opt.test_model_path))
     model.to(torch.device("cuda"))
 
-    identity_list = get_finger_list(opt.finger_test_list)
-    img_paths = [os.path.join(opt.finger_root, each) for each in identity_list]
+    identity_list = get_finger_list(opt.test_list)
+    img_paths = [os.path.join(opt.test_root, each) for each in identity_list]
 
     model.eval()
-    finger_test(model, img_paths, identity_list, opt.finger_test_list, opt.test_batch_size)
+    finger_test(model, img_paths, identity_list, opt.test_list, opt.test_batch_size)

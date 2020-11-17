@@ -10,9 +10,8 @@ import numpy as np
 from scipy import io
 from torch.nn import DataParallel
 
-from resnet import *
-from metrics import *
-from focal_loss import *
+from models import *
+from lossfunction import *
 from config import Config
 
 
@@ -26,6 +25,7 @@ def load_image(img_path):
     image = cv2.imread(img_path, 0)
     if image is None:
         return None
+    image = image[20:220, 20:220]
     image = image[np.newaxis, np.newaxis, :, :]
     image = image.astype(np.float32, copy=False)
     image -= 127.5
@@ -92,6 +92,6 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(opt.test_model_path))
     model.to(torch.device("cuda"))
 
-    pairs = get_finger_list(opt.finger_test_list)
+    pairs = get_finger_list(opt.test_list)
     model.eval()
-    finger_test(opt.finger_root, model, pairs,  opt.test_batch_size)
+    finger_test(opt.test_root, model, pairs,  opt.test_batch_size)

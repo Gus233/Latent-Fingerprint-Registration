@@ -30,8 +30,7 @@ def save_model(model, save_path, name, iter_cnt):
 if __name__ == '__main__':
 
     opt = Config()
-    if opt.display:
-        visualizer = Visualizer()
+
     device = torch.device("cuda")
 
     os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu_id
@@ -44,8 +43,12 @@ if __name__ == '__main__':
                                   num_workers=opt.num_workers)
     print('{} train iters per epoch:'.format(len(trainloader)))
 
-
-    criterion = Lossfunction()
+    test_dataset = Dataset(opt.test_root, opt.test_pd_root, opt.test_list, phase='test', input_shape=opt.input_shape)
+    testloader = data.DataLoader(test_dataset,
+                                  batch_size=opt.train_batch_size,
+                                  shuffle=False,
+                                  num_workers=opt.num_workers)
+    criterion = LossFunction()
 
     embedding_net=Unet_down()
     regression_net=Unet_up()
@@ -131,4 +134,7 @@ if __name__ == '__main__':
 
             if i % opt.save_interval == 0 or i == opt.max_epoch:
                 save_model(model, opt.checkpoints_path, opt.backbone, i)
+
+
+          
 
