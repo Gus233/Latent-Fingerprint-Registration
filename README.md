@@ -30,7 +30,7 @@ In the proposed latent fingerprint registration algorithm, the patch alignment a
     
 Testing
 -----
-The pretrained patch alignment and patch matching models can be downloaded Baidu Drive (extraction code: ).
+The pretrained patch alignment and patch matching models can be downloaded Baidu Drive https://pan.baidu.com/s/1ByIGUHj0x9k6gyY2evkq8w (extraction code: qz2y ).
 
 * The patch alignment and patch matching algorithms can be tested seperately with the test.py in each dir.
 * To obtain the potential corresponding points on a pair of fingerprints, please use the code in Testing dir.
